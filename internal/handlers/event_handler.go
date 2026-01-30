@@ -128,6 +128,7 @@ func (h *EventHandler) UpdateEvent (c *gin.Context) {
 
 	if err := database.DB.Save(&event).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update event"})
+		return
 	}
 
 	database.DB.Preload("Creator").First(&event, event.ID)
@@ -143,6 +144,7 @@ func (h *EventHandler) DeleteEvent (c *gin.Context) {
 	var event models.Event
 	if err := database.DB.First(&event, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
 	}
 
 	// Check if user is the creator
@@ -153,6 +155,7 @@ func (h *EventHandler) DeleteEvent (c *gin.Context) {
 
 	if err := database.DB.Delete(&event, id).Error; err != nil{
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete event"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})

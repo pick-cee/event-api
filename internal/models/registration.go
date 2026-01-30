@@ -17,7 +17,6 @@ type Registration struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-// ensure users cannot register for the same event twice
 func (r *Registration) TableName() string {
 	return "registrations"
 }
