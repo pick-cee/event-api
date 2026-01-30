@@ -18,34 +18,25 @@ import (
 func main() {
 	// connect to database
 	cfg := config.Load()
+	log.Println("✅ Configuration loaded")
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	if err := database.Connect(cfg); err != nil {
-		log.Println(err)
-		panic(err)
+		log.Fatal("❌ Failed to connect to database:", err)
 	}
 
 	if err := database.Migrate(); err != nil {
-		log.Println(err)
-		panic(err)
+		log.Fatal("❌ Failed to run migrations:", err)
 	}
 
-	// start server
-	router := gin.Default()
+	// Setup routes
+  router := setupRoutes(cfg)
 
 	router.Use(gin.Recovery())
 	router.Use(gin.Logger())
 	router.Use(middleware.CORSMiddleware())
-
-	// define routes
-
-	router.GET("/health", func(c *gin.Context){
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Events API is up and running",
-		})
-	})
 
 	srv := &http.Server{
 		Addr: ":" + cfg.Port,
