@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/pick-cee/events-api/internal/config"
+	"github.com/pick-cee/events-api/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -29,7 +30,9 @@ func Migrate() error {
 	log.Println("🔄 Running migrations...")
   
 	err := DB.AutoMigrate(
-
+		&models.User{},
+		&models.Event{},
+		&models.Registration{},
 	)
 
 	if err != nil {
