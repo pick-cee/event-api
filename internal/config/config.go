@@ -23,17 +23,17 @@ func Load() *Config {
 	}
 
 	return &Config{
-		Port: getEnv("PORT", ""),
-		DBHost: getEnv("DB_HOST", ""),
-		DBPort: getEnv("DB_PORT", ""),
-		DBUser: getEnv("DB_USER", ""),
-		DBPassword: getEnv("DB_PASSWORD", ""),
-		DBName: getEnv("DB_NAME", ""),
-		JWTSecret: getEnv("JWT_SECRET", ""),
+		Port: GetEnv("PORT", ""),
+		DBHost: GetEnv("DB_HOST", ""),
+		DBPort: GetEnv("DB_PORT", ""),
+		DBUser: GetEnv("DB_USER", ""),
+		DBPassword: GetEnv("DB_PASSWORD", ""),
+		DBName: GetEnv("DB_NAME", ""),
+		JWTSecret: GetEnv("JWT_SECRET", ""),
 	}
 }
 
-func getEnv(key, defaultValue string) string {
+func GetEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
