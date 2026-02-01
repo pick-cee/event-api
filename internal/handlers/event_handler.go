@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pick-cee/events-api/internal/database"
 	"github.com/pick-cee/events-api/internal/middleware"
 	"github.com/pick-cee/events-api/internal/models"
+	"github.com/pick-cee/events-api/internal/utils"
+	"gorm.io/gorm"
 )
 
 type EventHandler struct {}
@@ -33,14 +36,25 @@ type UpdateEventRequest struct {
 
 func (h *EventHandler) ListEvents(c *gin.Context) {
 	var events []models.Event
+	var total int64
 
-	// preload creator information
-	if err := database.DB.Preload("Creator").Find(&events).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events"})
+	params := utils.GetPaginationParams(c.Request)
+
+	// Count total
+	if err := database.DB.Model(&models.Event{}).Count(&total).Error; err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to count events")
 		return
 	}
 
-	c.JSON(http.StatusOK, events)
+	// preload creator information
+	if err := database.DB.Scopes(utils.Paginate(params)).Preload("Creator").Find(&events).Error; err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch events")
+		return
+	}
+
+	response := utils.NewPaginationResponse(events, total, params)
+
+	utils.SuccessResponse(c, http.StatusOK, response)
 }
 
 func (h *EventHandler) GetEventById(c *gin.Context) {
@@ -48,11 +62,11 @@ func (h *EventHandler) GetEventById(c *gin.Context) {
 
 	var event models.Event
 	if err := database.DB.Preload("Creator").Preload("Registrations.User").First(&event, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		utils.ErrorResponse(c, http.StatusNotFound, "Event not found")
 		return
 	}
 
-  c.JSON(http.StatusOK, event)
+	utils.SuccessResponse(c, http.StatusOK, event)
 }
 
 // create event 
@@ -60,7 +74,7 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	var request CreateEventRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.ValidationErrorResponse(c, err.Error())
 		return
 	}
 
@@ -76,14 +90,14 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	}
 
 	if err := database.DB.Create(&event).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occured whilc trying to create events"})
+		utils.ErrorResponse(c, http.StatusInternalServerError, "An error occured while trying to create events")
 		return
 	}
 
 	// Load creator info
   database.DB.Preload("Creator").First(&event, event.ID)
 
-	c.JSON(http.StatusCreated, event)
+	utils.SuccessResponse(c, http.StatusCreated, event)
 }
 
 func (h *EventHandler) UpdateEvent (c *gin.Context) {
@@ -93,19 +107,19 @@ func (h *EventHandler) UpdateEvent (c *gin.Context) {
 
   var event models.Event
   if err := database.DB.First(&event, id).Error; err != nil {
-    c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+    utils.ErrorResponse(c, http.StatusNotFound, "Event not found")
     return
   }
 
   // Check if user is the creator
   if event.CreatorID != userID {
-    c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own events"})
+    utils.ErrorResponse(c, http.StatusForbidden, "You can only update your own events")
     return
   }
 
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.ValidationErrorResponse(c, err.Error())
 		return
 	}
 
@@ -127,13 +141,13 @@ func (h *EventHandler) UpdateEvent (c *gin.Context) {
 	}
 
 	if err := database.DB.Save(&event).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update event"})
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update event")
 		return
 	}
 
 	database.DB.Preload("Creator").First(&event, event.ID)
 
-	c.JSON(http.StatusOK, event)
+	utils.SuccessResponse(c, http.StatusOK, event)
 }
 
 // Deletes event only by creator
@@ -143,20 +157,44 @@ func (h *EventHandler) DeleteEvent (c *gin.Context) {
 
 	var event models.Event
 	if err := database.DB.First(&event, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		utils.ErrorResponse(c, http.StatusNotFound, "Event not found")
 		return
 	}
 
 	// Check if user is the creator
   if event.CreatorID != userId {
-    c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own events"})
+    utils.ErrorResponse(c, http.StatusForbidden, "You can only update your own events")
     return
   }
 
 	if err := database.DB.Delete(&event, id).Error; err != nil{
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete event"})
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete event")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})
+	utils.SuccessResponse(c, http.StatusOK, gin.H{"message": "Event deleted successfully"})
+}
+
+func Paginate(r *http.Request) func (db *gorm.DB) *gorm.DB {
+	return func (db *gorm.DB) *gorm.DB {
+		q := r.URL.Query()
+		page, _ := strconv.Atoi(q.Get("page"))
+		limit, _ := strconv.Atoi(q.Get("limit"))
+
+		if page <= 0 {
+			page = 1
+		}
+
+		if limit <= 0 {
+			limit = 10
+		}
+
+		if limit > 100 {
+			limit = 100
+		}
+
+		offset := (page - 1) * limit
+
+		return db.Offset(offset).Limit(limit)
+	}
 }

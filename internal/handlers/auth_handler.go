@@ -14,6 +14,7 @@ import (
 	"github.com/pick-cee/events-api/internal/database"
 	"github.com/pick-cee/events-api/internal/middleware"
 	"github.com/pick-cee/events-api/internal/models"
+	"github.com/pick-cee/events-api/internal/utils"
 )
 
 
@@ -55,14 +56,14 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 	var req SignupRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.ValidationErrorResponse(c, err.Error())
 		return
 	}
 
 	// check if user is an existing user
 	var existingUser models.User
 	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
+		utils.ErrorResponse(c, http.StatusConflict, "Email already registered")
     return
 	}
 
@@ -74,14 +75,14 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create user")
     return
 	}
 
 	// generate a token
 	token, err := h.generateToken(user.ID, user.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
 
@@ -96,35 +97,34 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 
 	sendWelcomeEmail(response.User.Email)
 
-
-	c.JSON(http.StatusCreated, response)
+	utils.SuccessResponse(c, http.StatusCreated, response)
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 
 	if err := c.ShouldBindBodyWithJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.ValidationErrorResponse(c, err.Error())
 		return
 	}
 
 	// check if user exists
 	var existingUser models.User
 	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 
 	// check password
 	if !existingUser.CheckPassword(req.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 
 	// generate token
 	token, err := h.generateToken(existingUser.ID, existingUser.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
 
@@ -137,7 +137,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Token: token,
 	}
 
-	c.JSON(http.StatusOK, response)
+	utils.SuccessResponse(c, http.StatusOK, response)
 
 }
 
