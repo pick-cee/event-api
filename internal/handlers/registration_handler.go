@@ -34,6 +34,12 @@ func (h *RegistrationHandler) RegisterForEvent(c *gin.Context) {
 		return
 	}
 
+	var user models.User
+	if err := database.DB.First(&user, userId).Error; err != nil {
+		utils.ErrorResponse(c, http.StatusNotFound, "User not found")
+		return
+	}
+
 	// create registration
 	registration := models.Registration{
 		UserID:  userId,
@@ -46,6 +52,8 @@ func (h *RegistrationHandler) RegisterForEvent(c *gin.Context) {
 	}
 
 	database.DB.Preload("Event").Preload("User").Preload("Event.Creator").First(&registration, registration.ID)
+
+	utils.SendEventRegistrarionSuccessEmail(user.Email, user.Name, &event)
 
 	utils.SuccessResponse(c, http.StatusCreated, registration)
 }
@@ -60,12 +68,25 @@ func (h *RegistrationHandler) CancelRegistration(c *gin.Context) {
 		return
 	}
 
+	var event models.Event
+	if err := database.DB.First(&event, eventId).Error; err != nil {
+		utils.ErrorResponse(c, http.StatusNotFound, "Event not found")
+		return
+	}
+
+	var user models.User
+	if err := database.DB.First(&user, userId).Error; err != nil {
+		utils.ErrorResponse(c, http.StatusNotFound, "User not found")
+		return
+	}
+
 	// delete registration
 	if err := database.DB.Delete(&registration).Error; err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to cancel registration")
 		return
 	}
 
+	utils.SendEventCancellationSuccessEmail(user.Email, user.Name, &event)
 	utils.SuccessResponse(c, http.StatusOK, gin.H{"message": "Registration canceled successfully"})
 }
 
