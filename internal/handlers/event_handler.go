@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pick-cee/events-api/internal/cache"
 	"github.com/pick-cee/events-api/internal/database"
 	"github.com/pick-cee/events-api/internal/middleware"
 	"github.com/pick-cee/events-api/internal/models"
@@ -33,10 +35,18 @@ type UpdateEventRequest struct {
 }
 
 func (h *EventHandler) ListEvents(c *gin.Context) {
+	params := utils.GetPaginationParams(c.Request)
+	cacheKey := fmt.Sprintf("events:page=%d:limit=%d", params.Page, params.Limit)
+	ctx := c.Request.Context()
+
+	var cached utils.PaginatedResponse[models.Event]
+	if err := cache.Get(ctx, cacheKey, &cached); err == nil {
+		utils.SuccessResponse(c, http.StatusOK, cached)
+		return
+	}
+
 	var events []models.Event
 	var total int64
-
-	params := utils.GetPaginationParams(c.Request)
 
 	// Count total
 	if err := database.DB.Model(&models.Event{}).Count(&total).Error; err != nil {
@@ -51,6 +61,8 @@ func (h *EventHandler) ListEvents(c *gin.Context) {
 	}
 
 	response := utils.NewPaginationResponse(events, total, params)
+
+	_ = cache.Set(ctx, cacheKey, response, 5*time.Minute)
 
 	utils.SuccessResponse(c, http.StatusOK, response)
 }

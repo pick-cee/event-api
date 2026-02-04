@@ -30,6 +30,10 @@ func main() {
 		log.Fatal("❌ Failed to run migrations:", err)
 	}
 
+	if err := database.ConnectRedis(cfg); err != nil {
+		log.Fatal("❌ Failed to connect to Redis:", err)
+	}
+
 	// Setup routes
 	router := setupRoutes(cfg)
 
@@ -62,6 +66,10 @@ func main() {
 
 	if err := database.Disconnect(); err != nil {
 		log.Println("DB disconnect error:", err)
+	}
+
+	if err := database.DisconnectRedis(); err != nil {
+		log.Println("Redis disconnect error:", err)
 	}
 
 	log.Println("✅ Server exited properly")
