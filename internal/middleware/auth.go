@@ -12,8 +12,8 @@ import (
 
 type Claims struct {
 	UserID uint   `json:"user_id"`
-  Email  string `json:"email"`
-  jwt.RegisteredClaims
+	Email  string `json:"email"`
+	jwt.RegisteredClaims
 }
 
 func AuthMidleware(cfg *config.Config) gin.HandlerFunc {

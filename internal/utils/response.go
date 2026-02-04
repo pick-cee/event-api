@@ -9,7 +9,7 @@ import (
 func SuccessResponse(c *gin.Context, statusCode int, data interface{}) {
 	c.JSON(statusCode, gin.H{
 		"success": true,
-		"data": data,
+		"data":    data,
 	})
 }
 
@@ -23,6 +23,6 @@ func ErrorResponse(c *gin.Context, statusCode int, message string) {
 func ValidationErrorResponse(c *gin.Context, error string) {
 	c.JSON(http.StatusBadRequest, gin.H{
 		"success": false,
-		"errors": error,
+		"errors":  error,
 	})
 }

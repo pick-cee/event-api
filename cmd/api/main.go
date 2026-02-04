@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/pick-cee/events-api/internal/config"
 	"github.com/pick-cee/events-api/internal/database"
 	"github.com/pick-cee/events-api/internal/middleware"
@@ -20,7 +19,7 @@ func main() {
 	cfg := config.Load()
 	log.Println("✅ Configuration loaded")
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	_, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	if err := database.Connect(cfg); err != nil {
@@ -32,15 +31,13 @@ func main() {
 	}
 
 	// Setup routes
-  router := setupRoutes(cfg)
+	router := setupRoutes(cfg)
 
-	router.Use(gin.Recovery())
-	router.Use(gin.Logger())
 	router.Use(middleware.CORSMiddleware())
 
 	srv := &http.Server{
-		Addr: ":" + cfg.Port,
-		Handler: router,
+		Addr:              ":" + cfg.Port,
+		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

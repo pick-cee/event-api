@@ -14,7 +14,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Writer.Header().
 			Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		
+
 		if c.Request.Method == "OPTIONS" {
 			c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 			c.AbortWithStatus(http.StatusNoContent)

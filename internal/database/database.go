@@ -28,7 +28,7 @@ func Connect(cfg *config.Config) error {
 
 func Migrate() error {
 	log.Println("🔄 Running migrations...")
-  
+
 	err := DB.AutoMigrate(
 		&models.User{},
 		&models.Event{},
@@ -40,7 +40,7 @@ func Migrate() error {
 	}
 
 	log.Println("✅ Migrations completed")
-  return nil
+	return nil
 }
 
 func Disconnect() error {

@@ -18,8 +18,8 @@ type PaginatedResponse[T any] struct {
 
 // Pagination params
 type PaginationParams struct {
-  Page  int
-  Limit int
+	Page  int
+	Limit int
 }
 
 func GetPaginationParams(r *http.Request) PaginationParams {
@@ -42,8 +42,8 @@ func GetPaginationParams(r *http.Request) PaginationParams {
 	}
 }
 
-func Paginate(params PaginationParams) func (db *gorm.DB) *gorm.DB {
-	return func (db *gorm.DB) *gorm.DB {
+func Paginate(params PaginationParams) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
 		offset := (params.Page - 1) * params.Limit
 		return db.Offset(offset).Limit(params.Limit)
 	}
@@ -51,15 +51,15 @@ func Paginate(params PaginationParams) func (db *gorm.DB) *gorm.DB {
 
 func NewPaginationResponse[T any](data []T, total int64, params PaginationParams) PaginatedResponse[T] {
 	totalPages := int(total) / params.Limit
-	if int(total) % params.Limit != 0 {
+	if int(total)%params.Limit != 0 {
 		totalPages++
 	}
 
 	return PaginatedResponse[T]{
-		Page: params.Page,
-		Limit: params.Limit,
+		Page:       params.Page,
+		Limit:      params.Limit,
 		TotalItems: total,
 		TotalPages: totalPages,
-		Data: data,
+		Data:       data,
 	}
 }

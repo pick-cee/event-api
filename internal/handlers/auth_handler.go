@@ -17,7 +17,6 @@ import (
 	"github.com/pick-cee/events-api/internal/utils"
 )
 
-
 type AuthHandler struct {
 	cfg *config.Config
 }
@@ -64,19 +63,19 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 	var existingUser models.User
 	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		utils.ErrorResponse(c, http.StatusConflict, "Email already registered")
-    return
+		return
 	}
 
-	// create user 
+	// create user
 	user := models.User{
-		Name: req.Name,
-		Email: req.Email,
+		Name:     req.Name,
+		Email:    req.Email,
 		Password: req.Password,
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create user")
-    return
+		return
 	}
 
 	// generate a token
@@ -88,9 +87,9 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 
 	response := AuthResponse{
 		User: UserResponse{
-			ID: user.ID,
+			ID:    user.ID,
 			Email: user.Email,
-			Name: user.Name,
+			Name:  user.Name,
 		},
 		Token: token,
 	}
@@ -130,9 +129,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	response := AuthResponse{
 		User: UserResponse{
-			ID: existingUser.ID,
+			ID:    existingUser.ID,
 			Email: existingUser.Email,
-			Name: existingUser.Name,
+			Name:  existingUser.Name,
 		},
 		Token: token,
 	}
@@ -141,14 +140,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 }
 
-
 func (h *AuthHandler) generateToken(userId uint, email string) (string, error) {
 	claims := middleware.Claims{
 		UserID: userId,
-		Email: email,
+		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			IssuedAt: jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
@@ -172,11 +170,11 @@ func sendWelcomeEmail(email string) {
 				"image": "https://manimo.s3.us-east-1.amazonaws.com/new-logo-full+2.png",
 			},
 			To: components.CreateToSubscriberPayloadDto(components.SubscriberPayloadDto{
-				Email: &email,
+				Email:        &email,
 				SubscriberID: email,
 			}),
 		},
-		nil)
+			nil)
 
 		if err != nil {
 			log.Println("Error sending welcome email:", err)

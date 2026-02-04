@@ -10,7 +10,7 @@ import (
 	"github.com/pick-cee/events-api/internal/utils"
 )
 
-type RegistrationHandler struct {}
+type RegistrationHandler struct{}
 
 func NewRegistrationHandler() *RegistrationHandler {
 	return &RegistrationHandler{}
@@ -33,10 +33,10 @@ func (h *RegistrationHandler) RegisterForEvent(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusConflict, "Already registered for this event")
 		return
 	}
-	
+
 	// create registration
 	registration := models.Registration{
-		UserID: userId,
+		UserID:  userId,
 		EventID: event.ID,
 	}
 
@@ -71,7 +71,7 @@ func (h *RegistrationHandler) CancelRegistration(c *gin.Context) {
 
 func (h *RegistrationHandler) GetEventAttendees(c *gin.Context) {
 	eventId := c.Param("id")
-	
+
 	// check if event exists
 	var event models.Event
 	if err := database.DB.First(&event, eventId).Error; err != nil {

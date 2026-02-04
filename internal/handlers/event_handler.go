@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -10,12 +9,11 @@ import (
 	"github.com/pick-cee/events-api/internal/middleware"
 	"github.com/pick-cee/events-api/internal/models"
 	"github.com/pick-cee/events-api/internal/utils"
-	"gorm.io/gorm"
 )
 
-type EventHandler struct {}
+type EventHandler struct{}
 
-func NewEventHandler () *EventHandler {
+func NewEventHandler() *EventHandler {
 	return &EventHandler{}
 }
 
@@ -69,7 +67,7 @@ func (h *EventHandler) GetEventById(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, event)
 }
 
-// create event 
+// create event
 func (h *EventHandler) CreateEvent(c *gin.Context) {
 	var request CreateEventRequest
 
@@ -82,11 +80,11 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	userId := middleware.GetUserId(c)
 
 	event := models.Event{
-		Title: request.Title,
+		Title:       request.Title,
 		Description: request.Description,
-		Location: request.Location,
-		CreatorID: userId,
-		DateTime: request.DateTime,
+		Location:    request.Location,
+		CreatorID:   userId,
+		DateTime:    request.DateTime,
 	}
 
 	if err := database.DB.Create(&event).Error; err != nil {
@@ -95,28 +93,27 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	}
 
 	// Load creator info
-  database.DB.Preload("Creator").First(&event, event.ID)
+	database.DB.Preload("Creator").First(&event, event.ID)
 
 	utils.SuccessResponse(c, http.StatusCreated, event)
 }
 
-func (h *EventHandler) UpdateEvent (c *gin.Context) {
+func (h *EventHandler) UpdateEvent(c *gin.Context) {
 	var request UpdateEventRequest
 	id := c.Param("id")
-  userID := middleware.GetUserId(c)
+	userID := middleware.GetUserId(c)
 
-  var event models.Event
-  if err := database.DB.First(&event, id).Error; err != nil {
-    utils.ErrorResponse(c, http.StatusNotFound, "Event not found")
-    return
-  }
+	var event models.Event
+	if err := database.DB.First(&event, id).Error; err != nil {
+		utils.ErrorResponse(c, http.StatusNotFound, "Event not found")
+		return
+	}
 
-  // Check if user is the creator
-  if event.CreatorID != userID {
-    utils.ErrorResponse(c, http.StatusForbidden, "You can only update your own events")
-    return
-  }
-
+	// Check if user is the creator
+	if event.CreatorID != userID {
+		utils.ErrorResponse(c, http.StatusForbidden, "You can only update your own events")
+		return
+	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		utils.ValidationErrorResponse(c, err.Error())
@@ -124,7 +121,7 @@ func (h *EventHandler) UpdateEvent (c *gin.Context) {
 	}
 
 	// update field if required
-	if request.Title != ""{
+	if request.Title != "" {
 		event.Title = request.Title
 	}
 
@@ -151,7 +148,7 @@ func (h *EventHandler) UpdateEvent (c *gin.Context) {
 }
 
 // Deletes event only by creator
-func (h *EventHandler) DeleteEvent (c *gin.Context) {
+func (h *EventHandler) DeleteEvent(c *gin.Context) {
 	id := c.Param("id")
 	userId := middleware.GetUserId(c)
 
@@ -162,39 +159,15 @@ func (h *EventHandler) DeleteEvent (c *gin.Context) {
 	}
 
 	// Check if user is the creator
-  if event.CreatorID != userId {
-    utils.ErrorResponse(c, http.StatusForbidden, "You can only update your own events")
-    return
-  }
+	if event.CreatorID != userId {
+		utils.ErrorResponse(c, http.StatusForbidden, "You can only update your own events")
+		return
+	}
 
-	if err := database.DB.Delete(&event, id).Error; err != nil{
+	if err := database.DB.Delete(&event, id).Error; err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete event")
 		return
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, gin.H{"message": "Event deleted successfully"})
-}
-
-func Paginate(r *http.Request) func (db *gorm.DB) *gorm.DB {
-	return func (db *gorm.DB) *gorm.DB {
-		q := r.URL.Query()
-		page, _ := strconv.Atoi(q.Get("page"))
-		limit, _ := strconv.Atoi(q.Get("limit"))
-
-		if page <= 0 {
-			page = 1
-		}
-
-		if limit <= 0 {
-			limit = 10
-		}
-
-		if limit > 100 {
-			limit = 100
-		}
-
-		offset := (page - 1) * limit
-
-		return db.Offset(offset).Limit(limit)
-	}
 }

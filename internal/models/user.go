@@ -8,11 +8,11 @@ import (
 )
 
 type User struct {
-	ID uint `gorm:"primaryKey" json:"id"`
-	Name string `gorm:"not null" json:"name"`
-	Email string `gorm:"not null;unique" json:"email"`
-	Password string `gorm:"not null" json:"-"`
-	Events []Event `gorm:"foreignKey:CreatorID" json:"events,omitempty"`
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	Name      string         `gorm:"not null" json:"name"`
+	Email     string         `gorm:"not null;unique" json:"email"`
+	Password  string         `gorm:"not null" json:"-"`
+	Events    []Event        `gorm:"foreignKey:CreatorID" json:"events,omitempty"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -42,9 +42,8 @@ func (u *User) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
-
 // check if password is correct
 func (u *User) CheckPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-  return err == nil
+	return err == nil
 }

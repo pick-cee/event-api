@@ -9,6 +9,7 @@ import (
 
 func setupRoutes(cfg *config.Config) *gin.Engine {
 	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
 
 	// initialize handlers
 	authHandler := handlers.NewAuthHandler(cfg)
@@ -17,7 +18,7 @@ func setupRoutes(cfg *config.Config) *gin.Engine {
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
-			c.JSON(200, gin.H{"status": "ok"})
+		c.JSON(200, gin.H{"status": "ok"})
 	})
 
 	// API V1 routes
@@ -43,14 +44,14 @@ func setupRoutes(cfg *config.Config) *gin.Engine {
 		protected.Use(middleware.AuthMidleware(cfg))
 		{
 			// Event management (authenticated users)
-			protected.POST("/events", eventHandler.CreateEvent)           // POST /api/v1/events
-			protected.PUT("/events/:id", eventHandler.UpdateEvent)        // PUT /api/v1/events/:id
-			protected.DELETE("/events/:id", eventHandler.DeleteEvent)     // DELETE /api/v1/events/:id
+			protected.POST("/events", eventHandler.CreateEvent)       // POST /api/v1/events
+			protected.PUT("/events/:id", eventHandler.UpdateEvent)    // PUT /api/v1/events/:id
+			protected.DELETE("/events/:id", eventHandler.DeleteEvent) // DELETE /api/v1/events/:id
 
 			// Event registration (authenticated users)
-			protected.POST("/events/:id/register", registrationHandler.RegisterForEvent)     // POST /api/v1/events/:id/register
+			protected.POST("/events/:id/register", registrationHandler.RegisterForEvent)   // POST /api/v1/events/:id/register
 			protected.DELETE("/events/:id/cancel", registrationHandler.CancelRegistration) // DELETE /api/v1/events/:id/register
-			protected.GET("/my-registrations", registrationHandler.GetMyRegistrations)       // GET /api/v1/my-registrations
+			protected.GET("/my-registrations", registrationHandler.GetMyRegistrations)     // GET /api/v1/my-registrations
 		}
 	}
 	return r
