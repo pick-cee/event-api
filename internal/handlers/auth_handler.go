@@ -10,16 +10,19 @@ import (
 	"github.com/pick-cee/events-api/internal/database"
 	"github.com/pick-cee/events-api/internal/middleware"
 	"github.com/pick-cee/events-api/internal/models"
+	"github.com/pick-cee/events-api/internal/services"
 	"github.com/pick-cee/events-api/internal/utils"
 )
 
 type AuthHandler struct {
-	cfg *config.Config
+	cfg          *config.Config
+	emailService *services.EmailService
 }
 
-func NewAuthHandler(cfg *config.Config) *AuthHandler {
+func NewAuthHandler(cfg *config.Config, emailService *services.EmailService) *AuthHandler {
 	return &AuthHandler{
-		cfg: cfg,
+		cfg:          cfg,
+		emailService: emailService,
 	}
 }
 
@@ -90,7 +93,7 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 		Token: token,
 	}
 
-	utils.SendWelcomeEmail(response.User.Email, response.User.Name)
+	h.emailService.SendWelcomeEmail(response.User.Email, response.User.Name)
 
 	utils.SuccessResponse(c, http.StatusCreated, response)
 }

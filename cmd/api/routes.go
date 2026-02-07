@@ -5,16 +5,20 @@ import (
 	"github.com/pick-cee/events-api/internal/config"
 	"github.com/pick-cee/events-api/internal/handlers"
 	"github.com/pick-cee/events-api/internal/middleware"
+	"github.com/pick-cee/events-api/internal/services"
 )
 
 func setupRoutes(cfg *config.Config) *gin.Engine {
 	r := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
 
+	// initialize services needed by handlers
+	emailService := services.NewEmailService(cfg)
+
 	// initialize handlers
-	authHandler := handlers.NewAuthHandler(cfg)
+	authHandler := handlers.NewAuthHandler(cfg, emailService)
 	eventHandler := handlers.NewEventHandler()
-	registrationHandler := handlers.NewRegistrationHandler()
+	registrationHandler := handlers.NewRegistrationHandler(emailService)
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {

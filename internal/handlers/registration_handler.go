@@ -1,19 +1,27 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pick-cee/events-api/internal/cache"
 	"github.com/pick-cee/events-api/internal/database"
 	"github.com/pick-cee/events-api/internal/middleware"
 	"github.com/pick-cee/events-api/internal/models"
+	"github.com/pick-cee/events-api/internal/services"
 	"github.com/pick-cee/events-api/internal/utils"
 )
 
-type RegistrationHandler struct{}
+type RegistrationHandler struct {
+	emailService *services.EmailService
+}
 
-func NewRegistrationHandler() *RegistrationHandler {
-	return &RegistrationHandler{}
+func NewRegistrationHandler(emailService *services.EmailService) *RegistrationHandler {
+	return &RegistrationHandler{
+		emailService: emailService,
+	}
 }
 
 func (h *RegistrationHandler) RegisterForEvent(c *gin.Context) {
@@ -53,7 +61,7 @@ func (h *RegistrationHandler) RegisterForEvent(c *gin.Context) {
 
 	database.DB.Preload("Event").Preload("User").Preload("Event.Creator").First(&registration, registration.ID)
 
-	utils.SendEventRegistrarionSuccessEmail(user.Email, user.Name, &event)
+	h.emailService.SendEventRegistrarionSuccessEmail(user.Email, user.Name, &event)
 
 	utils.SuccessResponse(c, http.StatusCreated, registration)
 }
@@ -86,7 +94,7 @@ func (h *RegistrationHandler) CancelRegistration(c *gin.Context) {
 		return
 	}
 
-	utils.SendEventCancellationSuccessEmail(user.Email, user.Name, &event)
+	h.emailService.SendEventCancellationSuccessEmail(user.Email, user.Name, &event)
 	utils.SuccessResponse(c, http.StatusOK, gin.H{"message": "Registration canceled successfully"})
 }
 
@@ -113,11 +121,21 @@ func (h *RegistrationHandler) GetEventAttendees(c *gin.Context) {
 func (h *RegistrationHandler) GetMyRegistrations(c *gin.Context) {
 	userId := middleware.GetUserId(c)
 
+	cacheKey := fmt.Sprintf("event_registrations:userId=%v", userId)
+	ctx := c.Request.Context()
+
+	var cached []models.Registration
+	if err := cache.Get(ctx, cacheKey, &cached); err == nil {
+		utils.SuccessResponse(c, http.StatusOK, cached)
+	}
+
 	var registrations []models.Registration
 	if err := database.DB.Where("user_id", userId).Preload("Event.Creator").Find(&registrations).Error; err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch events")
 		return
 	}
+
+	_ = cache.Set(ctx, cacheKey, registrations, 5*time.Minute)
 
 	utils.SuccessResponse(c, http.StatusOK, registrations)
 }

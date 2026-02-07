@@ -69,12 +69,22 @@ func (h *EventHandler) ListEvents(c *gin.Context) {
 
 func (h *EventHandler) GetEventById(c *gin.Context) {
 	id := c.Param("id")
+	cacheKey := fmt.Sprintf("events:id=%v", id)
+	ctx := c.Request.Context()
+
+	var cached models.Event
+	if err := cache.Get(ctx, cacheKey, &cached); err == nil {
+		utils.SuccessResponse(c, http.StatusOK, cached)
+		return
+	}
 
 	var event models.Event
 	if err := database.DB.Preload("Creator").Preload("Registrations.User").First(&event, id).Error; err != nil {
 		utils.ErrorResponse(c, http.StatusNotFound, "Event not found")
 		return
 	}
+
+	_ = cache.Set(ctx, cacheKey, event, 5*time.Minute)
 
 	utils.SuccessResponse(c, http.StatusOK, event)
 }

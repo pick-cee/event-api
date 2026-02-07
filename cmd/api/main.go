@@ -12,6 +12,8 @@ import (
 	"github.com/pick-cee/events-api/internal/config"
 	"github.com/pick-cee/events-api/internal/database"
 	"github.com/pick-cee/events-api/internal/middleware"
+	"github.com/pick-cee/events-api/internal/scheduler"
+	"github.com/pick-cee/events-api/internal/services"
 )
 
 func main() {
@@ -33,6 +35,14 @@ func main() {
 	if err := database.ConnectRedis(cfg); err != nil {
 		log.Fatal("❌ Failed to connect to Redis:", err)
 	}
+
+	// start scheduler
+	emailService := services.NewEmailService(cfg)
+	cronScheduler, err := scheduler.StartScheduler(emailService)
+	if err != nil {
+		log.Fatal("❌ Failed to start scheduler:", err)
+	}
+	defer cronScheduler.Shutdown()
 
 	// Setup routes
 	router := setupRoutes(cfg)
