@@ -207,5 +207,4 @@ MIT
 - [Novu](https://novu.co/) - Notification infrastructure
 - [gocron](https://github.com/go-co-op/gocron) - Job scheduler
 - [go-redis](https://github.com/redis/go-redis) - Redis client
-
 ````
