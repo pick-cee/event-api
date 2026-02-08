@@ -211,28 +211,3 @@ MIT
 ````
 
 ---
-
-## Also Create `.env.example`
-
-```env
-# Server Configuration
-PORT=8080
-
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=your_password_here
-DB_NAME=event_api
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-
-# Redis Configuration
-REDIS_URL=redis://localhost:6379
-
-# Novu Email Service
-NOVU_SECRET_KEY=your-novu-secret-key-here
-````
-
----
