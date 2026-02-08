@@ -1,37 +1,36 @@
+````markdown
 # Event Management API
 
-A REST API for managing events and registrations built with Go, Gin, PostgreSQL, and GORM.
+A production-ready REST API for managing events and registrations built with Go, Gin, PostgreSQL, GORM, Redis, and automated email notifications.
 
 ## Features
 
-- ✅ User authentication (JWT)
+- ✅ User authentication & authorization (JWT)
 - ✅ Create, read, update, delete events
 - ✅ Event registration system
 - ✅ Authorization (users can only modify their own events)
 - ✅ View event attendees
+- ✅ Email notifications (Novu integration)
+  - Welcome emails on signup
+  - Registration confirmation emails
+  - Event reminder emails (24 hours & 1 hour before)
+- ✅ Redis caching for performance
+- ✅ Automated cron jobs for event reminders
+- ✅ Pagination support
+- ✅ Rate limiting ready
+- ✅ CORS support
+- ✅ Graceful shutdown
 
 ## Tech Stack
 
 - **Framework:** Gin
 - **Database:** PostgreSQL
 - **ORM:** GORM
+- **Cache:** Redis
 - **Authentication:** JWT
 - **Password Hashing:** bcrypt
-
-## Project Structure
-
-```
-event-api/
-├── cmd/api/              # Application entry point
-├── internal/
-│   ├── models/           # Database models
-│   ├── handlers/         # HTTP handlers
-│   ├── middleware/       # Middleware (auth, etc.)
-│   ├── database/         # Database connection & migrations
-│   └── config/           # Configuration
-├── .env                  # Environment variables
-└── README.md
-```
+- **Email Service:** Novu
+- **Job Scheduler:** gocron
 
 ## Setup
 
@@ -39,15 +38,18 @@ event-api/
 
 - Go 1.21+
 - PostgreSQL 14+
+- Redis 7+
+- Novu account (for email notifications)
 
 ### Installation
 
 1. Clone the repository
 
 ```bash
-git clone https://github.com/pick-cee/event-api.git
-cd event-api
+git clone https://github.com/pick-cee/events-api.git
+cd events-api
 ```
+````
 
 2. Install dependencies
 
@@ -61,22 +63,37 @@ go mod download
 cp .env.example .env
 ```
 
-4. Update `.env` with your database credentials
+4. Update `.env` with your credentials
 
 ```env
+# Server
 PORT=8080
+
+# Database
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=your_password
 DB_NAME=event_api
-JWT_SECRET=your-secret-key
+
+# JWT
+JWT_SECRET=your-super-secret-key-change-in-production
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Novu (Email Service)
+NOVU_SECRET_KEY=your-novu-secret-key
 ```
 
-5. Create database
+5. Start PostgreSQL and Redis
 
 ```bash
+# PostgreSQL
 createdb event_api
+
+# Redis (if not already running)
+redis-server
 ```
 
 6. Run the application
@@ -86,6 +103,19 @@ go run cmd/api/*.go
 ```
 
 The server will start on `http://localhost:8080`
+
+**You should see:**
+
+```
+✅ Configuration loaded
+✅ Connected to database
+✅ Migrations completed
+✅ Connected to Redis
+✅ Scheduler started
+  - 24h reminders: Every 1 hour
+  - 1h reminders: Every 10 minutes
+🚀 Server running on port 8080
+```
 
 ## API Endpoints
 
@@ -100,7 +130,7 @@ The server will start on `http://localhost:8080`
 
 | Method | Endpoint             | Description                 | Auth Required |
 | ------ | -------------------- | --------------------------- | ------------- |
-| GET    | `/api/v1/events`     | List all events             | No            |
+| GET    | `/api/v1/events`     | List all events (paginated) | No            |
 | GET    | `/api/v1/events/:id` | Get single event            | No            |
 | POST   | `/api/v1/events`     | Create event                | Yes           |
 | PUT    | `/api/v1/events/:id` | Update event (creator only) | Yes           |
@@ -115,96 +145,16 @@ The server will start on `http://localhost:8080`
 | GET    | `/api/v1/events/:id/attendees` | Get event attendees  | No            |
 | GET    | `/api/v1/my-registrations`     | Get my registrations | Yes           |
 
-## Usage Examples
+## Cron Jobs
 
-### 1. Signup
+The API runs automated jobs for event reminders:
 
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "password123"
-  }'
-```
+| Job               | Schedule         | Description                                 |
+| ----------------- | ---------------- | ------------------------------------------- |
+| 24-hour reminders | Every 1 hour     | Sends reminders for events happening in 24h |
+| 1-hour reminders  | Every 10 minutes | Sends reminders for events happening in 1h  |
 
-**Response:**
-
-```json
-{
-	"user": {
-		"id": 1,
-		"name": "John Doe",
-		"email": "john@example.com"
-	},
-	"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-### 2. Login
-
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "password123"
-  }'
-```
-
-### 3. Create Event
-
-```bash
-curl -X POST http://localhost:8080/api/v1/events \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{
-    "title": "Go Workshop",
-    "description": "Learn Go programming",
-    "location": "Lagos, Nigeria",
-    "date_time": "2025-02-15T10:00:00Z"
-  }'
-```
-
-### 4. List Events
-
-```bash
-curl http://localhost:8080/api/v1/events
-```
-
-### 5. Register for Event
-
-```bash
-curl -X POST http://localhost:8080/api/v1/events/1/register \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-### 6. Get My Registrations
-
-```bash
-curl http://localhost:8080/api/v1/my-registrations \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-### 7. Update Event (Creator Only)
-
-```bash
-curl -X PUT http://localhost:8080/api/v1/events/1 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{
-    "title": "Advanced Go Workshop",
-    "location": "Abuja, Nigeria"
-  }'
-```
-
-### 8. Delete Event (Creator Only)
-
-```bash
-curl -X DELETE http://localhost:8080/api/v1/events/1 \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
+Jobs use Redis to prevent duplicate emails.
 
 ## Database Schema
 
@@ -213,9 +163,10 @@ curl -X DELETE http://localhost:8080/api/v1/events/1 \
 - `id` (Primary Key)
 - `name`
 - `email` (Unique)
-- `password` (Hashed)
+- `password` (Hashed with bcrypt)
 - `created_at`
 - `updated_at`
+- `deleted_at` (Soft delete)
 
 ### Events
 
@@ -227,6 +178,7 @@ curl -X DELETE http://localhost:8080/api/v1/events/1 \
 - `creator_id` (Foreign Key → Users)
 - `created_at`
 - `updated_at`
+- `deleted_at` (Soft delete)
 
 ### Registrations
 
@@ -234,7 +186,53 @@ curl -X DELETE http://localhost:8080/api/v1/events/1 \
 - `user_id` (Foreign Key → Users)
 - `event_id` (Foreign Key → Events)
 - `created_at`
+- `deleted_at` (Soft delete)
+
+## Caching
+
+Redis is used for:
+
+- Preventing duplicate reminder emails
+- Session management (future feature)
+- Rate limiting (future feature)
 
 ## License
 
 MIT
+
+## Acknowledgments
+
+- [Gin](https://gin-gonic.com/) - Web framework
+- [GORM](https://gorm.io/) - ORM library
+- [Novu](https://novu.co/) - Notification infrastructure
+- [gocron](https://github.com/go-co-op/gocron) - Job scheduler
+- [go-redis](https://github.com/redis/go-redis) - Redis client
+
+````
+
+---
+
+## Also Create `.env.example`
+
+```env
+# Server Configuration
+PORT=8080
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password_here
+DB_NAME=event_api
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+
+# Redis Configuration
+REDIS_URL=redis://localhost:6379
+
+# Novu Email Service
+NOVU_SECRET_KEY=your-novu-secret-key-here
+````
+
+---
